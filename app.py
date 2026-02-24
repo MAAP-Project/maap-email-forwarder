@@ -33,59 +33,54 @@ if missing := required_keys - config_data.keys():
 if not isinstance(config_data["forward_mapping"], dict):
     raise TypeError("'forward_mapping' must be a JSON object")
 
+
 class EmailForwarderStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
-        
+
         # S3 bucket for email storage
         email_bucket = s3.Bucket(
-            self, "EmailBucket",
+            self,
+            "EmailBucket",
             bucket_name=config_data["email_bucket"],
             versioned=True,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
             enforce_ssl=True,
             removal_policy=RemovalPolicy.RETAIN,
         )
-        
+
         # Grant SES permission to write to S3
         email_bucket.add_to_resource_policy(
             iam.PolicyStatement(
                 actions=["s3:PutObject"],
                 resources=[f"{email_bucket.bucket_arn}/*"],
                 principals=[iam.ServicePrincipal("ses.amazonaws.com")],
-                conditions={
-                    "StringEquals": {
-                        "AWS:SourceAccount": self.account
-                    }
-                }
+                conditions={"StringEquals": {"AWS:SourceAccount": self.account}},
             )
         )
-        
+
         # Lambda function
         forwarder_lambda = lambda_.Function(
-            self, "EmailForwarder",
+            self,
+            "EmailForwarder",
             runtime=lambda_.Runtime.PYTHON_3_12,
             handler="handler.lambda_handler",
             code=lambda_.Code.from_asset("lambda"),
             timeout=Duration.seconds(30),
         )
-        
+
         # Grant permissions
         email_bucket.grant_read(forwarder_lambda)
-        
+
         forwarder_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=["ses:SendRawEmail"],
-                resources=["*"]
-            )
+            iam.PolicyStatement(actions=["ses:SendRawEmail"], resources=["*"])
         )
-        
+
         # SES Receipt Rule Set
         rule_set = ses.ReceiptRuleSet(
-            self, "EmailRuleSet",
-            receipt_rule_set_name="email-forwarder-rules"
+            self, "EmailRuleSet", receipt_rule_set_name="email-forwarder-rules"
         )
-        
+
         # Add receipt rule
         rule_set.add_rule(
             "ForwardRule",
@@ -97,14 +92,15 @@ class EmailForwarderStack(Stack):
                 ),
                 ses_actions.Lambda(
                     function=forwarder_lambda,
-                )
-            ]
+                ),
+            ],
         )
+
 
 app = App()
 
 EmailForwarderStack(
-    app, 
+    app,
     "EmailForwarderStack",
 )
 app.synth()
