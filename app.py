@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+from aws_cdk import (
+    App,
+    Stack,
+    aws_lambda as lambda_,
+    aws_s3 as s3,
+    aws_iam as iam,
+    aws_ses as ses,
+    aws_ses_actions as ses_actions,
+    Duration,
+    RemovalPolicy,
+)
+from constructs import Construct
+import json
+from pathlib import Path
+
+
+# Load config for CDK to use
+config_path = Path(__file__).parent / "lambda" / "config.json"
+if not config_path.is_file():
+    raise FileNotFoundError(f"Missing config file: {config_path}")
+
+try:
+    with config_path.open() as f:
+        config_data = json.load(f)
+except json.JSONDecodeError as exc:
+    raise ValueError(f"Invalid JSON in {config_path}: {exc}") from exc
+
+required_keys = {"email_bucket", "email_key_prefix", "forward_mapping"}
+
+if missing := required_keys - config_data.keys():
+    raise KeyError(f"Missing required config keys: {sorted(missing)}")
+if not isinstance(config_data["forward_mapping"], dict):
+    raise TypeError("'forward_mapping' must be a JSON object")
+
+class EmailForwarderStack(Stack):
+    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+        super().__init__(scope, construct_id, **kwargs)
+        
+        # S3 bucket for email storage
+        email_bucket = s3.Bucket(
+            self, "EmailBucket",
+            bucket_name=config_data["email_bucket"],
+            versioned=True,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            enforce_ssl=True,
+            removal_policy=RemovalPolicy.RETAIN,
+        )
+        
+        # Grant SES permission to write to S3
+        email_bucket.add_to_resource_policy(
+            iam.PolicyStatement(
+                actions=["s3:PutObject"],
+                resources=[f"{email_bucket.bucket_arn}/*"],
+                principals=[iam.ServicePrincipal("ses.amazonaws.com")],
+                conditions={
+                    "StringEquals": {
+                        "AWS:SourceAccount": self.account
+                    }
+                }
+            )
+        )
+        
+        # Lambda function
+        forwarder_lambda = lambda_.Function(
+            self, "EmailForwarder",
+            runtime=lambda_.Runtime.PYTHON_3_12,
+            handler="handler.lambda_handler",
+            code=lambda_.Code.from_asset("lambda"),
+            timeout=Duration.seconds(30),
+        )
+        
+        # Grant permissions
+        email_bucket.grant_read(forwarder_lambda)
+        
+        forwarder_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["ses:SendRawEmail"],
+                resources=["*"]
+            )
+        )
+        
+        # SES Receipt Rule Set
+        rule_set = ses.ReceiptRuleSet(
+            self, "EmailRuleSet",
+            receipt_rule_set_name="email-forwarder-rules"
+        )
+        
+        # Add receipt rule
+        rule_set.add_rule(
+            "ForwardRule",
+            recipients=list(config_data["forward_mapping"].keys()),
+            actions=[
+                ses_actions.S3(
+                    bucket=email_bucket,
+                    object_key_prefix=config_data["email_key_prefix"],
+                ),
+                ses_actions.Lambda(
+                    function=forwarder_lambda,
+                )
+            ]
+        )
+
+app = App()
+
+EmailForwarderStack(
+    app, 
+    "EmailForwarderStack",
+)
+app.synth()

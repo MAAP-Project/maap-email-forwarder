@@ -1,0 +1,17 @@
+{
+  "from_email": "no-reply@maap-project.org",
+  "subject_prefix": "",
+  "email_bucket": "maap-emails",
+  "email_key_prefix": "received/",
+  "forward_mapping": {
+    "example@maap-project.org": ["forward.address@maap-project.org"],
+    "support@maap-project.org": [
+      "alex@developmentseed.org",
+      "brian.p.satorius@jpl.nasa.gov",
+      "george.w.chang@jpl.nasa.gov",
+      "jamison@developmentseed.org",
+      "rishi.verma@jpl.nasa.gov",
+      "sujen.shah@jpl.nasa.gov"
+    ]
+  }
+}
