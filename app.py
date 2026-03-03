@@ -11,27 +11,7 @@ from aws_cdk import (
     RemovalPolicy,
 )
 from constructs import Construct
-import json
-from pathlib import Path
-
-
-# Load config for CDK to use
-config_path = Path(__file__).parent / "lambda" / "config.json"
-if not config_path.is_file():
-    raise FileNotFoundError(f"Missing config file: {config_path}")
-
-try:
-    with config_path.open() as f:
-        config_data = json.load(f)
-except json.JSONDecodeError as exc:
-    raise ValueError(f"Invalid JSON in {config_path}: {exc}") from exc
-
-required_keys = {"email_bucket", "email_key_prefix", "forward_mapping"}
-
-if missing := required_keys - config_data.keys():
-    raise KeyError(f"Missing required config keys: {sorted(missing)}")
-if not isinstance(config_data["forward_mapping"], dict):
-    raise TypeError("'forward_mapping' must be a JSON object")
+from config import CONFIG
 
 
 class EmailForwarderStack(Stack):
@@ -42,7 +22,7 @@ class EmailForwarderStack(Stack):
         email_bucket = s3.Bucket(
             self,
             "EmailBucket",
-            bucket_name=config_data["email_bucket"],
+            bucket_name=CONFIG.email_bucket,
             versioned=True,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
             enforce_ssl=True,
@@ -64,8 +44,29 @@ class EmailForwarderStack(Stack):
             self,
             "EmailForwarder",
             runtime=lambda_.Runtime.PYTHON_3_12,
-            handler="handler.lambda_handler",
-            code=lambda_.Code.from_asset("lambda"),
+            handler="lambda.handler.lambda_handler",
+            code=lambda_.Code.from_asset(
+                ".",
+                exclude=[
+                    "cdk.out",
+                    "cdk.out/**",
+                    ".venv",
+                    ".venv/**",
+                    ".git",
+                    ".git/**",
+                    "tests",
+                    "tests/**",
+                    "**/__pycache__",
+                    "**/__pycache__/**",
+                    "**/*.pyc",
+                    "**/.pytest_cache",
+                    "**/.pytest_cache/**",
+                    "**/.mypy_cache",
+                    "**/.mypy_cache/**",
+                    "**/.ruff_cache",
+                    "**/.ruff_cache/**",
+                ],
+            ),
             timeout=Duration.seconds(30),
         )
 
@@ -84,11 +85,11 @@ class EmailForwarderStack(Stack):
         # Add receipt rule
         rule_set.add_rule(
             "ForwardRule",
-            recipients=list(config_data["forward_mapping"].keys()),
+            recipients=list(CONFIG.forward_mapping.keys()),
             actions=[
                 ses_actions.S3(
                     bucket=email_bucket,
-                    object_key_prefix=config_data["email_key_prefix"],
+                    object_key_prefix=CONFIG.email_key_prefix,
                 ),
                 ses_actions.Lambda(
                     function=forwarder_lambda,

@@ -9,7 +9,8 @@ LAMBDA_DIR = ROOT_DIR / "lambda"
 
 
 def load_handler_module():
-    sys.path.insert(0, str(LAMBDA_DIR))
+    original_sys_path = list(sys.path)
+    sys.path[:0] = [str(ROOT_DIR), str(LAMBDA_DIR)]
     try:
         spec = importlib.util.spec_from_file_location(
             "email_forwarder_handler", LAMBDA_DIR / "handler.py"
@@ -19,7 +20,7 @@ def load_handler_module():
         spec.loader.exec_module(module)
         return module
     finally:
-        sys.path.pop(0)
+        sys.path[:] = original_sys_path
 
 
 def build_event(message_id: str = "message-123", recipients: list[str] | None = None):
@@ -49,6 +50,28 @@ def build_email_bytes(
     return msg.as_bytes()
 
 
+def attach_clients(handler, s3_client, ses_client):
+    handler.s3 = s3_client
+    handler.ses = ses_client
+
+
+def build_s3_client(mocker, body_bytes=None):
+    if body_bytes is None:
+        body_bytes = build_email_bytes()
+    mock_body = mocker.Mock()
+    mock_body.read.return_value = body_bytes
+
+    mock_s3 = mocker.Mock()
+    mock_s3.get_object.return_value = {"Body": mock_body}
+    return mock_s3
+
+
+def build_ses_client(mocker):
+    mock_ses = mocker.Mock()
+    mock_ses.send_raw_email.return_value = {"MessageId": "ses-1"}
+    return mock_ses
+
+
 def test_lambda_handler_success_path(mocker):
     """Verifies the happy path end-to-end for one mapped recipient.
 
@@ -60,17 +83,9 @@ def test_lambda_handler_success_path(mocker):
     """
     handler = load_handler_module()
 
-    mock_body = mocker.Mock()
-    mock_body.read.return_value = build_email_bytes()
-
-    mock_s3 = mocker.Mock()
-    mock_s3.get_object.return_value = {"Body": mock_body}
-
-    mock_ses = mocker.Mock()
-    mock_ses.send_raw_email.return_value = {"MessageId": "ses-1"}
-
-    handler.s3 = mock_s3
-    handler.ses = mock_ses
+    mock_s3 = build_s3_client(mocker)
+    mock_ses = build_ses_client(mocker)
+    attach_clients(handler, mock_s3, mock_ses)
 
     result = handler.lambda_handler(build_event(), None)
 
@@ -94,17 +109,9 @@ def test_lambda_handler_no_mapping_skips_send(mocker):
     """
     handler = load_handler_module()
 
-    mock_body = mocker.Mock()
-    mock_body.read.return_value = build_email_bytes()
-
-    mock_s3 = mocker.Mock()
-    mock_s3.get_object.return_value = {"Body": mock_body}
-
-    mock_ses = mocker.Mock()
-    mock_ses.send_raw_email.return_value = {"MessageId": "ses-1"}
-
-    handler.s3 = mock_s3
-    handler.ses = mock_ses
+    mock_s3 = build_s3_client(mocker)
+    mock_ses = build_ses_client(mocker)
+    attach_clients(handler, mock_s3, mock_ses)
 
     result = handler.lambda_handler(
         build_event(recipients=["unknown@maap-project.org"]), None
@@ -123,14 +130,12 @@ def test_lambda_handler_s3_failure_returns_500(mocker):
     """
     handler = load_handler_module()
 
-    mock_s3 = mocker.Mock()
+    mock_s3 = build_s3_client(mocker)
     mock_s3.get_object.side_effect = RuntimeError("S3 failed")
 
-    mock_ses = mocker.Mock()
-    mock_ses.send_raw_email.return_value = {"MessageId": "ses-1"}
+    mock_ses = build_ses_client(mocker)
 
-    handler.s3 = mock_s3
-    handler.ses = mock_ses
+    attach_clients(handler, mock_s3, mock_ses)
 
     result = handler.lambda_handler(build_event(), None)
 
@@ -148,17 +153,11 @@ def test_lambda_handler_ses_failure_returns_500(mocker):
     """
     handler = load_handler_module()
 
-    mock_body = mocker.Mock()
-    mock_body.read.return_value = build_email_bytes()
-
-    mock_s3 = mocker.Mock()
-    mock_s3.get_object.return_value = {"Body": mock_body}
-
-    mock_ses = mocker.Mock()
+    mock_s3 = build_s3_client(mocker)
+    mock_ses = build_ses_client(mocker)
     mock_ses.send_raw_email.side_effect = RuntimeError("SES failed")
 
-    handler.s3 = mock_s3
-    handler.ses = mock_ses
+    attach_clients(handler, mock_s3, mock_ses)
 
     result = handler.lambda_handler(build_event(), None)
 
