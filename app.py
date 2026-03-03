@@ -11,7 +11,7 @@ from aws_cdk import (
     RemovalPolicy,
 )
 from constructs import Construct
-from config import CONFIG
+from infrastructure.config import CONFIG
 
 
 class EmailForwarderStack(Stack):
@@ -44,29 +44,8 @@ class EmailForwarderStack(Stack):
             self,
             "EmailForwarder",
             runtime=lambda_.Runtime.PYTHON_3_12,
-            handler="lambda.handler.lambda_handler",
-            code=lambda_.Code.from_asset(
-                ".",
-                exclude=[
-                    "cdk.out",
-                    "cdk.out/**",
-                    ".venv",
-                    ".venv/**",
-                    ".git",
-                    ".git/**",
-                    "tests",
-                    "tests/**",
-                    "**/__pycache__",
-                    "**/__pycache__/**",
-                    "**/*.pyc",
-                    "**/.pytest_cache",
-                    "**/.pytest_cache/**",
-                    "**/.mypy_cache",
-                    "**/.mypy_cache/**",
-                    "**/.ruff_cache",
-                    "**/.ruff_cache/**",
-                ],
-            ),
+            handler="handler.lambda_handler",
+            code=lambda_.Code.from_asset("infrastructure"),
             timeout=Duration.seconds(30),
         )
 

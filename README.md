@@ -40,12 +40,13 @@ To deploy the project, you will need to have an SES verified domain connected to
     ```
 
 ### Configuration
-- `config.json`: Configuration file for the email forwarder.
+- `from_email`: The email address to use as the sender.
+- `subject_prefix`: The prefix to add to the subject line of forwarded emails.
 - `email_bucket`: The S3 bucket name for storing emails.
 - `email_key_prefix`: The prefix for email objects in the S3 bucket.
 - `forward_mapping`: A mapping of recipient emails to forward to.
 
-To add a new email forward, update the [`config.json`](lambda/config.json) file with the new mapping.
+To add a new email forward, update the `forward_mapping` repository variable in Github settings, following the existing convention and ensuring that it is a valid JSON object.
 
 ### License
 This project is licensed under the Apache License. See the [LICENSE](LICENSE) file for details.

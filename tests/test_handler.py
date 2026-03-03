@@ -5,7 +5,7 @@ import sys
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-LAMBDA_DIR = ROOT_DIR / "lambda"
+LAMBDA_DIR = ROOT_DIR / "infrastructure"
 
 
 def load_handler_module():
