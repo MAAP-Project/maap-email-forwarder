@@ -56,5 +56,5 @@ jobs:
         run: uv run cdk synth
 
       - name: CDK Deploy
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         run: uv run cdk deploy --require-approval never --all
