@@ -10,6 +10,7 @@ from aws_cdk import (
     Duration,
     RemovalPolicy,
 )
+from aws_cdk.aws_lambda_python_alpha import PythonFunction
 from constructs import Construct
 from infrastructure.config import CONFIG
 
@@ -40,12 +41,13 @@ class EmailForwarderStack(Stack):
         )
 
         # Lambda function
-        forwarder_lambda = lambda_.Function(
+        forwarder_lambda = PythonFunction(
             self,
             "EmailForwarder",
             runtime=lambda_.Runtime.PYTHON_3_12,
-            handler="handler.lambda_handler",
-            code=lambda_.Code.from_asset("infrastructure"),
+            entry="infrastructure",
+            index="handler.py",
+            handler="lambda_handler",
             timeout=Duration.seconds(30),
         )
 
