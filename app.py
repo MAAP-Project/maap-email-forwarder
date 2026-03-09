@@ -89,6 +89,8 @@ class EmailForwarderStack(Stack):
                     function=forwarder_lambda,
                 ),
             ],
+            enabled=True,
+            scan_enabled=True
         )
 
 

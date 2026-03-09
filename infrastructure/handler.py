@@ -4,7 +4,7 @@ import logging
 from config import CONFIG
 
 s3 = boto3.client("s3")
-ses = boto3.client("ses")
+ses = boto3.client("ses", region_name="us-west-2")
 logger = logging.getLogger(__name__)
 
 
@@ -30,6 +30,26 @@ def lambda_handler(event, context):
 
     # Parse the email
     msg = email.message_from_bytes(email_content)
+    
+    # Get original info before modifying
+    original_from = msg.get("From", "")
+    original_subject = msg.get("Subject", "")
+    
+    # Remove all sender-related headers that might contain unverified addresses
+    for header in ["From", "Sender", "Return-Path", "Reply-To"]:
+        while header in msg:
+            del msg[header]
+    
+    # Set new headers with verified sender
+    msg["From"] = CONFIG.from_email
+    msg["Reply-To"] = original_from
+    msg["Return-Path"] = CONFIG.from_email
+    
+    # Modify subject if prefix is set
+    if CONFIG.subject_prefix:
+        while "Subject" in msg:
+            del msg["Subject"]
+        msg["Subject"] = f"{CONFIG.subject_prefix}{original_subject}"
 
     # Process each recipient
     for recipient in recipients:
@@ -38,16 +58,6 @@ def lambda_handler(event, context):
         if not forward_addresses:
             logger.warning("No forwarding address for %s", recipient)
             continue
-
-        # Modify subject if prefix is set
-        if CONFIG.subject_prefix:
-            original_subject = msg.get("Subject", "")
-            msg.replace_header("Subject", f"{CONFIG.subject_prefix}{original_subject}")
-
-        # Update From header
-        original_from = msg.get("From", "")
-        msg.replace_header("From", CONFIG.from_email)
-        msg.add_header("Reply-To", original_from)
 
         # Send the email
         try:
