@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 from aws_cdk import (
     App,
     Stack,
@@ -49,6 +50,18 @@ class EmailForwarderStack(Stack):
             index="handler.py",
             handler="lambda_handler",
             timeout=Duration.seconds(30),
+            environment={
+                "FROM_EMAIL": str(CONFIG.from_email),
+                "SUBJECT_PREFIX": CONFIG.subject_prefix,
+                "EMAIL_BUCKET": CONFIG.email_bucket,
+                "EMAIL_KEY_PREFIX": CONFIG.email_key_prefix,
+                "FORWARD_MAPPING": json.dumps(
+                    {
+                        str(recipient): [str(address) for address in destinations]
+                        for recipient, destinations in CONFIG.forward_mapping.items()
+                    }
+                ),
+            },
         )
 
         # Grant permissions
