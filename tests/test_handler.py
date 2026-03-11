@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from email import message_from_bytes
 from email.message import EmailMessage
 import importlib.util
 from pathlib import Path
@@ -163,3 +166,50 @@ def test_lambda_handler_ses_failure_returns_500(mocker):
 
     assert result["statusCode"] == 500
     assert "Error sending email" in result["body"]
+
+
+def test_lambda_handler_removes_auth_and_ses_control_headers(mocker):
+    """Ensures sensitive inbound auth/control headers are stripped.
+
+    SES can reject or mis-handle forwarded mail if stale authentication or
+    control headers are preserved. This test verifies the handler strips them
+    from the message read from S3 before forwarding.
+    """
+    handler = load_handler_module()
+
+    msg = EmailMessage()
+    msg["Subject"] = "Test Subject"
+    msg["From"] = "sender@example.com"
+    msg["To"] = "example@maap-project.org"
+    msg["DKIM-Signature"] = "v=1; a=rsa-sha256; d=example.com;"
+    msg["DKIM-Signature"] = "v=1; a=rsa-sha256; d=mail.example.com;"
+    msg["Authentication-Results"] = "mx.example; dkim=pass"
+    msg["ARC-Seal"] = "i=1; a=rsa-sha256;"
+    msg["ARC-Message-Signature"] = "i=1; a=rsa-sha256;"
+    msg["ARC-Authentication-Results"] = "i=1; mx.example; dkim=pass"
+    msg["Received-SPF"] = "pass (example.com: domain of sender@example.com)"
+    msg["X-SES-SOURCE-ARN"] = "arn:aws:ses:us-west-2:123456789012:identity/example.com"
+    msg["Bcc"] = "hidden@example.com"
+    msg.set_content("Test body")
+
+    mock_s3 = build_s3_client(mocker, body_bytes=msg.as_bytes())
+    mock_ses = build_ses_client(mocker)
+    attach_clients(handler, mock_s3, mock_ses)
+
+    result = handler.lambda_handler(
+        build_event(recipients=["example@maap-project.org"]), None
+    )
+
+    assert result["statusCode"] == 200
+    mock_ses.send_raw_email.assert_called_once()
+    _, kwargs = mock_ses.send_raw_email.call_args
+    forwarded = message_from_bytes(kwargs["RawMessage"]["Data"])
+    assert forwarded.get_all("DKIM-Signature") is None
+    assert forwarded.get_all("Authentication-Results") is None
+    assert forwarded.get_all("ARC-Seal") is None
+    assert forwarded.get_all("ARC-Message-Signature") is None
+    assert forwarded.get_all("ARC-Authentication-Results") is None
+    assert forwarded.get_all("Received-SPF") is None
+    assert forwarded.get_all("X-SES-SOURCE-ARN") is None
+    assert forwarded.get_all("Bcc") is None
+    assert kwargs["Destinations"] == ["forward.address@maap-project.org"]
