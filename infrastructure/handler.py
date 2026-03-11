@@ -35,10 +35,26 @@ def lambda_handler(event, context):
     original_from = msg.get("From", "")
     original_subject = msg.get("Subject", "")
     
-    # Remove all sender-related headers that might contain unverified addresses
-    for header in ["From", "Sender", "Return-Path", "Reply-To"]:
-        while header in msg:
-            del msg[header]
+    # Remove sender/auth headers that can conflict with SES re-signing.
+    # Also strip SES control headers from inbound mail to avoid misuse.
+    headers_to_strip = {
+        "from",
+        "sender",
+        "return-path",
+        "reply-to",
+        "dkim-signature",
+        "arc-seal",
+        "arc-message-signature",
+        "arc-authentication-results",
+        "authentication-results",
+        "received-spf",
+        "bcc",
+    }
+    for header in list(msg.keys()):
+        normalized = header.lower()
+        if normalized in headers_to_strip or normalized.startswith("x-ses-"):
+            while header in msg:
+                del msg[header]
     
     # Set new headers with verified sender
     msg["From"] = CONFIG.from_email
