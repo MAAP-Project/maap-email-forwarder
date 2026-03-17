@@ -9,8 +9,8 @@ class EmailForwarderConfig(BaseSettings):
     from_email: EmailStr = Field(
         ..., validation_alias="FROM_EMAIL", description="Email address to send from"
     )
-    subject_prefix: str = Field(
-        default="",
+    subject_prefix: str | None = Field(
+        default=None,
         validation_alias="SUBJECT_PREFIX",
         description="Prefix to add to forwarded email subjects",
     )
@@ -25,6 +25,13 @@ class EmailForwarderConfig(BaseSettings):
     forward_mapping: Dict[EmailStr, List[EmailStr]] = Field(
         ..., validation_alias="FORWARD_MAPPING", description="Mapping of recipient to forward addresses"
     )
+
+    @field_validator("email_key_prefix", mode="before")
+    @classmethod
+    def normalize_email_key_prefix(cls, value):
+        if isinstance(value, str):
+            value = value.strip().strip("\"'")
+        return value or ""
 
     @field_validator("forward_mapping", mode="before")
     @classmethod
