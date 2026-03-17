@@ -42,6 +42,20 @@ class EmailForwarderStack(Stack):
         )
 
         # Lambda function
+        lambda_environment = {
+            "FROM_EMAIL": str(CONFIG.from_email),
+            "EMAIL_BUCKET": CONFIG.email_bucket,
+            "EMAIL_KEY_PREFIX": CONFIG.email_key_prefix,
+            "FORWARD_MAPPING": json.dumps(
+                {
+                    str(recipient): [str(address) for address in destinations]
+                    for recipient, destinations in CONFIG.forward_mapping.items()
+                }
+            ),
+        }
+        if CONFIG.subject_prefix is not None:
+            lambda_environment["SUBJECT_PREFIX"] = CONFIG.subject_prefix
+
         forwarder_lambda = PythonFunction(
             self,
             "EmailForwarder",
@@ -50,18 +64,7 @@ class EmailForwarderStack(Stack):
             index="handler.py",
             handler="lambda_handler",
             timeout=Duration.seconds(30),
-            environment={
-                "FROM_EMAIL": str(CONFIG.from_email),
-                "SUBJECT_PREFIX": CONFIG.subject_prefix,
-                "EMAIL_BUCKET": CONFIG.email_bucket,
-                "EMAIL_KEY_PREFIX": CONFIG.email_key_prefix,
-                "FORWARD_MAPPING": json.dumps(
-                    {
-                        str(recipient): [str(address) for address in destinations]
-                        for recipient, destinations in CONFIG.forward_mapping.items()
-                    }
-                ),
-            },
+            environment=lambda_environment,
         )
 
         # Grant permissions
