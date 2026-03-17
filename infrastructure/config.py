@@ -26,12 +26,12 @@ class EmailForwarderConfig(BaseSettings):
         ..., validation_alias="FORWARD_MAPPING", description="Mapping of recipient to forward addresses"
     )
 
-    @field_validator("email_key_prefix", mode="before")
+    @field_validator("subject_prefix", mode="before")
     @classmethod
-    def normalize_email_key_prefix(cls, value):
+    def normalize_subject_prefix(cls, value):
         if isinstance(value, str):
             value = value.strip().strip("\"'")
-        return value or ""
+        return value or None
 
     @field_validator("forward_mapping", mode="before")
     @classmethod
