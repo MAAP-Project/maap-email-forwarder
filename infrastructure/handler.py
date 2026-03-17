@@ -6,6 +6,7 @@ from config import CONFIG
 s3 = boto3.client("s3")
 ses = boto3.client("ses", region_name="us-west-2")
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def lambda_handler(event, context):
@@ -19,6 +20,7 @@ def lambda_handler(event, context):
 
     # Construct S3 key
     key = f"{CONFIG.email_key_prefix}{message_id}"
+    logger.info("Retrieving inbound email from s3://%s/%s", CONFIG.email_bucket, key)
 
     # Retrieve email from S3
     try:
@@ -77,6 +79,7 @@ def lambda_handler(event, context):
 
         # Send the email
         try:
+            logger.info("Forwarding email for %s to %s", recipient, forward_addresses)
             ses.send_raw_email(
                 Source=CONFIG.from_email,
                 Destinations=forward_addresses,
