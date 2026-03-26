@@ -6,6 +6,8 @@ from aws_cdk import (
     aws_lambda as lambda_,
     aws_s3 as s3,
     aws_iam as iam,
+    aws_kms as kms,
+    aws_sns as sns,
     aws_ses as ses,
     aws_ses_actions as ses_actions,
     Duration,
@@ -19,6 +21,41 @@ from infrastructure.config import CONFIG
 class EmailForwarderStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
+
+        # Customer-managed key for SNS topic encryption at rest.
+        sns_topics_key = kms.Key(
+            self,
+            "EmailForwarderSnsTopicsKey",
+            alias="alias/email-forwarder-sns",
+            enable_key_rotation=True,
+            removal_policy=RemovalPolicy.RETAIN,
+        )
+
+        def create_secure_topic(topic_id: str, display_name: str) -> sns.Topic:
+            topic = sns.Topic(
+                self,
+                topic_id,
+                display_name=display_name,
+                master_key=sns_topics_key,
+            )
+
+            # Require TLS for all topic actions
+            topic.add_to_resource_policy(
+                iam.PolicyStatement(
+                    sid="DenyInsecureTransport",
+                    effect=iam.Effect.DENY,
+                    principals=[iam.AnyPrincipal()],
+                    actions=["sns:*"],
+                    resources=[topic.topic_arn],
+                    conditions={"Bool": {"aws:SecureTransport": "false"}},
+                )
+            )
+            return topic
+
+        # SNS topics for SES event notifications
+        create_secure_topic("BounceTopic", "Email Bounce Notifications")
+        create_secure_topic("ComplaintTopic", "Email Complaint Notifications")
+        create_secure_topic("DeliveryTopic", "Email Delivery Notifications")
 
         # S3 bucket for email storage
         email_bucket = s3.Bucket(
