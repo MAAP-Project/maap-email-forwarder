@@ -161,8 +161,9 @@ class EmailForwarderStack(Stack):
             )
             notification_resource.node.add_dependency(ses_identity)
             notification_resource.node.add_dependency(topic)
-            if topic.policy is not None:
-                notification_resource.node.add_dependency(topic.policy)
+            topic_policy = topic.node.try_find_child("Policy")
+            if topic_policy is not None:
+                notification_resource.node.add_dependency(topic_policy)
 
         # S3 bucket for email storage
         email_bucket = s3.Bucket(
