@@ -23,6 +23,9 @@ class EmailForwarderStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        # Domain used by SES identity and SNS publish authorization conditions.
+        domain = str(CONFIG.from_email).split("@")[1]
+
         # Customer-managed key for SNS topic encryption at rest.
         sns_topics_key = kms.Key(
             self,
@@ -81,7 +84,12 @@ class EmailForwarderStack(Stack):
                     principals=[iam.ServicePrincipal("ses.amazonaws.com")],
                     actions=["sns:Publish"],
                     resources=[topic.topic_arn],
-                    conditions={"StringEquals": {"AWS:SourceAccount": self.account}},
+                    conditions={
+                        "StringEquals": {"AWS:SourceAccount": self.account},
+                        "StringLike": {
+                            "AWS:SourceArn": f"arn:aws:ses:{self.region}:{self.account}:identity/{domain}"
+                        },
+                    },
                 )
             )
             return topic
@@ -92,7 +100,6 @@ class EmailForwarderStack(Stack):
         delivery_topic = create_secure_topic("DeliveryTopic", "Email Delivery Notifications")
 
         # SES domain identity — manages the verified domain and wires up notification topics.
-        domain = str(CONFIG.from_email).split("@")[1]
         ses_identity = ses.EmailIdentity(
             self,
             "SesIdentity",
@@ -153,6 +160,10 @@ class EmailForwarderStack(Stack):
                 ),
             )
             notification_resource.node.add_dependency(ses_identity)
+            notification_resource.node.add_dependency(topic)
+            topic_policy = topic.node.try_find_child("Policy")
+            if topic_policy is not None:
+                notification_resource.node.add_dependency(topic_policy)
 
         # S3 bucket for email storage
         email_bucket = s3.Bucket(
