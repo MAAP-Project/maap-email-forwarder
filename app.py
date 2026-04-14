@@ -6,8 +6,11 @@ from aws_cdk import (
     aws_lambda as lambda_,
     aws_s3 as s3,
     aws_iam as iam,
+    aws_kms as kms,
+    aws_sns as sns,
     aws_ses as ses,
     aws_ses_actions as ses_actions,
+    custom_resources as cr,
     Duration,
     RemovalPolicy,
 )
@@ -19,6 +22,127 @@ from infrastructure.config import CONFIG
 class EmailForwarderStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
+
+        # Customer-managed key for SNS topic encryption at rest.
+        sns_topics_key = kms.Key(
+            self,
+            "EmailForwarderSnsTopicsKey",
+            alias="alias/email-forwarder-sns",
+            enable_key_rotation=True,
+            removal_policy=RemovalPolicy.RETAIN,
+        )
+
+        # Allow the SNS service to use the KMS key when publishing to encrypted topics.
+        sns_topics_key.add_to_resource_policy(
+            iam.PolicyStatement(
+                sid="AllowSNSUseOfKey",
+                effect=iam.Effect.ALLOW,
+                principals=[iam.ServicePrincipal("sns.amazonaws.com")],
+                actions=["kms:GenerateDataKey*", "kms:Decrypt"],
+                resources=["*"],
+            )
+        )
+
+        def create_secure_topic(topic_id: str, display_name: str) -> sns.Topic:
+            topic = sns.Topic(
+                self,
+                topic_id,
+                display_name=display_name,
+                master_key=sns_topics_key,
+            )
+
+            # Require TLS for all topic actions
+            topic.add_to_resource_policy(
+                iam.PolicyStatement(
+                    sid="DenyInsecureTransport",
+                    effect=iam.Effect.DENY,
+                    principals=[iam.AnyPrincipal()],
+                    actions=["sns:*"],
+                    resources=[topic.topic_arn],
+                    conditions={"Bool": {"aws:SecureTransport": "false"}},
+                )
+            )
+
+            # Allow SES service to publish to this topic for identity notifications.
+            topic.add_to_resource_policy(
+                iam.PolicyStatement(
+                    sid="AllowSESPublish",
+                    effect=iam.Effect.ALLOW,
+                    principals=[iam.ServicePrincipal("ses.amazonaws.com")],
+                    actions=["sns:Publish"],
+                    resources=[topic.topic_arn],
+                    conditions={"StringEquals": {"AWS:SourceAccount": self.account}},
+                )
+            )
+            return topic
+
+        # SNS topics for SES event notifications
+        bounce_topic = create_secure_topic("BounceTopic", "Email Bounce Notifications")
+        complaint_topic = create_secure_topic("ComplaintTopic", "Email Complaint Notifications")
+        delivery_topic = create_secure_topic("DeliveryTopic", "Email Delivery Notifications")
+
+        # SES domain identity — manages the verified domain and wires up notification topics.
+        domain = str(CONFIG.from_email).split("@")[1]
+        ses_identity = ses.EmailIdentity(
+            self,
+            "SesIdentity",
+            identity=ses.Identity.domain(domain),
+        )
+
+        # Wire each SNS topic to the SES identity for bounce/complaint/delivery notifications.
+        for notification_type, topic in [
+            ("Bounce", bounce_topic),
+            ("Complaint", complaint_topic),
+            ("Delivery", delivery_topic),
+        ]:
+            notification_resource = cr.AwsCustomResource(
+                self,
+                f"SesIdentity{notification_type}Notification",
+                on_create=cr.AwsSdkCall(
+                    service="SES",
+                    action="SetIdentityNotificationTopic",
+                    parameters={
+                        "Identity": domain,
+                        "NotificationType": notification_type,
+                        "SnsTopic": topic.topic_arn,
+                    },
+                    physical_resource_id=cr.PhysicalResourceId.of(
+                        f"{domain}-{notification_type}"
+                    ),
+                ),
+                on_update=cr.AwsSdkCall(
+                    service="SES",
+                    action="SetIdentityNotificationTopic",
+                    parameters={
+                        "Identity": domain,
+                        "NotificationType": notification_type,
+                        "SnsTopic": topic.topic_arn,
+                    },
+                    physical_resource_id=cr.PhysicalResourceId.of(
+                        f"{domain}-{notification_type}"
+                    ),
+                ),
+                on_delete=cr.AwsSdkCall(
+                    service="SES",
+                    action="SetIdentityNotificationTopic",
+                    parameters={
+                        "Identity": domain,
+                        "NotificationType": notification_type,
+                    },
+                    physical_resource_id=cr.PhysicalResourceId.of(
+                        f"{domain}-{notification_type}"
+                    ),
+                ),
+                policy=cr.AwsCustomResourcePolicy.from_statements(
+                    [
+                        iam.PolicyStatement(
+                            actions=["ses:SetIdentityNotificationTopic"],
+                            resources=["*"],
+                        )
+                    ]
+                ),
+            )
+            notification_resource.node.add_dependency(ses_identity)
 
         # S3 bucket for email storage
         email_bucket = s3.Bucket(

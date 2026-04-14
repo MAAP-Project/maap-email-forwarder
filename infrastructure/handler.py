@@ -32,6 +32,7 @@ def lambda_handler(event, context):
 
     # Parse the email
     msg = email.message_from_bytes(email_content)
+    logger.info("Email retrieved: From=%s Subject=%s", msg.get("From"), msg.get("Subject"))
     
     # Get original info before modifying
     original_from = msg.get("From", "")
@@ -79,7 +80,7 @@ def lambda_handler(event, context):
 
         # Send the email
         try:
-            logger.info("Forwarding email for %s to %s", recipient, forward_addresses)
+            logger.info("Forwarding email for %s", recipient)
             ses.send_raw_email(
                 Source=CONFIG.from_email,
                 Destinations=forward_addresses,
