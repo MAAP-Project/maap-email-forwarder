@@ -77,7 +77,7 @@ class EmailForwarderStack(Stack):
             )
 
             # Allow SES service to publish to this topic for identity notifications.
-            topic.add_to_resource_policy(
+            ses_publish_policy = topic.add_to_resource_policy(
                 iam.PolicyStatement(
                     sid="AllowSESPublish",
                     effect=iam.Effect.ALLOW,
@@ -85,19 +85,25 @@ class EmailForwarderStack(Stack):
                     actions=["sns:Publish"],
                     resources=[topic.topic_arn],
                     conditions={
-                        "StringEquals": {"AWS:SourceAccount": self.account},
-                        "StringLike": {
-                            "AWS:SourceArn": f"arn:aws:ses:{self.region}:{self.account}:identity/{domain}"
+                        "StringEquals": {
+                            "AWS:SourceAccount": self.account,
+                            "AWS:SourceOwner": self.account,
                         },
                     },
                 )
             )
-            return topic
+            return topic, ses_publish_policy.policy_dependable
 
         # SNS topics for SES event notifications
-        bounce_topic = create_secure_topic("BounceTopic", "Email Bounce Notifications")
-        complaint_topic = create_secure_topic("ComplaintTopic", "Email Complaint Notifications")
-        delivery_topic = create_secure_topic("DeliveryTopic", "Email Delivery Notifications")
+        bounce_topic, bounce_topic_policy = create_secure_topic(
+            "BounceTopic", "Email Bounce Notifications"
+        )
+        complaint_topic, complaint_topic_policy = create_secure_topic(
+            "ComplaintTopic", "Email Complaint Notifications"
+        )
+        delivery_topic, delivery_topic_policy = create_secure_topic(
+            "DeliveryTopic", "Email Delivery Notifications"
+        )
 
         # SES domain identity — manages the verified domain and wires up notification topics.
         ses_identity = ses.EmailIdentity(
@@ -107,10 +113,10 @@ class EmailForwarderStack(Stack):
         )
 
         # Wire each SNS topic to the SES identity for bounce/complaint/delivery notifications.
-        for notification_type, topic in [
-            ("Bounce", bounce_topic),
-            ("Complaint", complaint_topic),
-            ("Delivery", delivery_topic),
+        for notification_type, topic, topic_policy in [
+            ("Bounce", bounce_topic, bounce_topic_policy),
+            ("Complaint", complaint_topic, complaint_topic_policy),
+            ("Delivery", delivery_topic, delivery_topic_policy),
         ]:
             notification_resource = cr.AwsCustomResource(
                 self,
@@ -161,7 +167,6 @@ class EmailForwarderStack(Stack):
             )
             notification_resource.node.add_dependency(ses_identity)
             notification_resource.node.add_dependency(topic)
-            topic_policy = topic.node.try_find_child("Policy")
             if topic_policy is not None:
                 notification_resource.node.add_dependency(topic_policy)
 
