@@ -57,7 +57,17 @@ class EmailForwarderStack(Stack):
                     sid="DenyInsecureTransport",
                     effect=iam.Effect.DENY,
                     principals=[iam.AnyPrincipal()],
-                    actions=["sns:*"],
+                    actions=[
+                        "sns:Publish",
+                        "sns:Subscribe",
+                        "sns:Receive",
+                        "sns:GetTopicAttributes",
+                        "sns:SetTopicAttributes",
+                        "sns:AddPermission",
+                        "sns:RemovePermission",
+                        "sns:DeleteTopic",
+                        "sns:ListSubscriptionsByTopic",
+                    ],
                     resources=[topic.topic_arn],
                     conditions={"Bool": {"aws:SecureTransport": "false"}},
                 )
