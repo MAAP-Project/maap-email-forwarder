@@ -46,6 +46,23 @@ class EmailForwarderStack(Stack):
             )
         )
 
+        # SES must also be allowed for KMS-encrypted SNS notification topics.
+        sns_topics_key.add_to_resource_policy(
+            iam.PolicyStatement(
+                sid="AllowSESUseOfKeyForNotifications",
+                effect=iam.Effect.ALLOW,
+                principals=[iam.ServicePrincipal("ses.amazonaws.com")],
+                actions=["kms:GenerateDataKey*", "kms:Decrypt"],
+                resources=["*"],
+                conditions={
+                    "StringEquals": {"AWS:SourceAccount": self.account},
+                    "StringLike": {
+                        "AWS:SourceArn": f"arn:aws:ses:{self.region}:{self.account}:identity/{domain}"
+                    },
+                },
+            )
+        )
+
         def create_secure_topic(topic_id: str, display_name: str) -> sns.Topic:
             topic = sns.Topic(
                 self,
