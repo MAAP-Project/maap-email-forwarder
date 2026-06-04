@@ -45,7 +45,7 @@ jobs:
           aws-region: 'us-west-2' # This should not be changed
 
       - name: CDK Synth
-        run: uv run cdk synth
+        run: uv run npx cdk synth
 
       - name: CDK Deploy
         if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
