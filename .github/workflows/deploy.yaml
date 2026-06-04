@@ -44,9 +44,6 @@ jobs:
           role-to-assume: ${{ vars.DEPLOY_ROLE }}
           aws-region: 'us-west-2' # This should not be changed
 
-      - name: CDK Synth
-        run: uv run npx cdk synth
-
       - name: CDK Deploy
         if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         run: uv run npx cdk deploy --require-approval never --all
