@@ -11,7 +11,7 @@ dependencies = [
     "pydantic==2.13.4",
     "pydantic-settings==2.14.2",
     "email-validator==2.3.0",
-    "boto3==1.43.34"
+    "boto3==1.43.39"
 ]
 
 [dependency-groups]
@@ -20,7 +20,7 @@ dev = [
     "pre-commit>=4.6.0",
     "pytest>=9.1.1",
     "pytest-mock>=3.14.0",
-    "ruff==0.15.18",
+    "ruff==0.15.20",
 ]
 
 [tool.mypy]
