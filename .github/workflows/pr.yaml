@@ -1,14 +1,11 @@
-name: Deploy MAAP Email Forwarder
+name: Pull Request Workflow
 
 permissions:
   id-token: write
   contents: read
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  pull_request:
 
 jobs:
   deploy:
@@ -32,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked
 
+      - name: Run unit tests
+        run: uv run pytest -q
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b # v6.2.1
         with:
@@ -39,5 +39,4 @@ jobs:
           aws-region: 'us-west-2' # This should not be changed
 
       - name: CDK Deploy
-        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
-        run: uv run npx cdk deploy --require-approval never --all
+        run: uv run npx cdk synth

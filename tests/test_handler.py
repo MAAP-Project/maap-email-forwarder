@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+import importlib.util
+import sys
 from email import message_from_bytes
 from email.message import EmailMessage
-import importlib.util
 from pathlib import Path
-import sys
-
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 LAMBDA_DIR = ROOT_DIR / "infrastructure"

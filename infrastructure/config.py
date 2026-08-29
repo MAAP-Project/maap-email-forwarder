@@ -1,8 +1,7 @@
 import json
-from pydantic import EmailStr, Field
+
+from pydantic import EmailStr, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Dict, List
-from pydantic import field_validator
 
 
 class EmailForwarderConfig(BaseSettings):
@@ -15,15 +14,19 @@ class EmailForwarderConfig(BaseSettings):
         description="Prefix to add to forwarded email subjects",
     )
     email_bucket: str = Field(
-        ..., validation_alias="EMAIL_BUCKET", description="S3 bucket name for storing emails"
+        ...,
+        validation_alias="EMAIL_BUCKET",
+        description="S3 bucket name for storing emails",
     )
     email_key_prefix: str = Field(
         default="received/",
         validation_alias="EMAIL_KEY_PREFIX",
         description="S3 key prefix for stored emails",
     )
-    forward_mapping: Dict[EmailStr, List[EmailStr]] = Field(
-        ..., validation_alias="FORWARD_MAPPING", description="Mapping of recipient to forward addresses"
+    forward_mapping: dict[EmailStr, list[EmailStr]] = Field(
+        ...,
+        validation_alias="FORWARD_MAPPING",
+        description="Mapping of recipient to forward addresses",
     )
 
     @field_validator("subject_prefix", mode="before")

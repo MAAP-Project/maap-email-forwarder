@@ -1,6 +1,7 @@
-import boto3
 import email
 import logging
+
+import boto3
 from config import CONFIG
 
 s3 = boto3.client("s3")
@@ -32,12 +33,14 @@ def lambda_handler(event, context):
 
     # Parse the email
     msg = email.message_from_bytes(email_content)
-    logger.info("Email retrieved: From=%s Subject=%s", msg.get("From"), msg.get("Subject"))
-    
+    logger.info(
+        "Email retrieved: From=%s Subject=%s", msg.get("From"), msg.get("Subject")
+    )
+
     # Get original info before modifying
     original_from = msg.get("From", "")
     original_subject = msg.get("Subject", "")
-    
+
     # Remove sender/auth headers that can conflict with SES re-signing.
     # Also strip SES control headers from inbound mail to avoid misuse.
     headers_to_strip = {
@@ -58,12 +61,12 @@ def lambda_handler(event, context):
         if normalized in headers_to_strip or normalized.startswith("x-ses-"):
             while header in msg:
                 del msg[header]
-    
+
     # Set new headers with verified sender
     msg["From"] = CONFIG.from_email
     msg["Reply-To"] = original_from
     msg["Return-Path"] = CONFIG.from_email
-    
+
     # Modify subject if prefix is set
     if CONFIG.subject_prefix:
         while "Subject" in msg:
