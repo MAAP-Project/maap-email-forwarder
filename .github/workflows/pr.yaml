@@ -8,7 +8,7 @@ on:
   pull_request:
 
 jobs:
-  deploy:
+  validate:
     runs-on: ubuntu-latest
     env:
       FROM_EMAIL: ${{ vars.FROM_EMAIL }}
@@ -39,4 +39,4 @@ jobs:
           aws-region: 'us-west-2' # This should not be changed
 
       - name: CDK Deploy
-        run: uv run npx cdk synth
+        run: uv run npx cdk diff --ci
