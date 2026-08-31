@@ -6,6 +6,8 @@ permissions:
 
 on:
   pull_request:
+    branches:
+      - main
 
 jobs:
   validate:
@@ -38,5 +40,5 @@ jobs:
           role-to-assume: ${{ vars.DEPLOY_ROLE }}
           aws-region: 'us-west-2' # This should not be changed
 
-      - name: CDK Deploy
+      - name: CDK Diff
         run: uv run npx cdk diff --ci
