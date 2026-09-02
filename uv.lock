@@ -50,18 +50,17 @@ wheels = [
 
 [[package]]
 name = "aws-cdk-aws-lambda-python-alpha"
-version = "2.260.0a0"
+version = "2.263.0a0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aws-cdk-lib" },
     { name = "constructs" },
     { name = "jsii" },
     { name = "publication" },
-    { name = "typeguard" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e3/46/8d5cbe8bb9baa3c92213587912127be0232c6df54aa82f064282ad895c80/aws_cdk_aws_lambda_python_alpha-2.260.0a0.tar.gz", hash = "sha256:198ac4636d79a362ae2a210306688621fb44188f5227b01689dd4eab3fd9b3a0", size = 100546, upload-time = "2026-06-16T23:37:03.735Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f4/75/4104cd14c5a0f638d197946a4b34a4930bc5b154ea80bdf2d4ac6a906323/aws_cdk_aws_lambda_python_alpha-2.263.0a0.tar.gz", hash = "sha256:d38e6165b9f9e6877bc39ae929494d2af6b30e217e6566ed515d404c14f5a790", size = 100273, upload-time = "2026-07-31T16:46:59.674Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/34/92/e94319dc77cf9aaf83e03659e2eb48710044eef31d5cd98fa66e676eb8ee/aws_cdk_aws_lambda_python_alpha-2.260.0a0-py3-none-any.whl", hash = "sha256:143e8dee0fdb8c6d53e4607f0b6ecd85fe5b0b44fa86244ff59a51b9458f1ce2", size = 99603, upload-time = "2026-06-16T23:36:14.895Z" },
+    { url = "https://files.pythonhosted.org/packages/46/76/2d2699051475b2f4f5c5bd2cb4f95b8cc7c8f4242f088ac416325fc10b06/aws_cdk_aws_lambda_python_alpha-2.263.0a0-py3-none-any.whl", hash = "sha256:95f9c2f09d9930225de0f8ae628f4c66c24ec395fb4c8e02c033f2c778a810cf", size = 99302, upload-time = "2026-07-31T16:46:06.418Z" },
 ]
 
 [[package]]
@@ -79,7 +78,7 @@ wheels = [
 
 [[package]]
 name = "aws-cdk-lib"
-version = "2.260.0"
+version = "2.263.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aws-cdk-asset-awscli-v1" },
@@ -88,25 +87,24 @@ dependencies = [
     { name = "constructs" },
     { name = "jsii" },
     { name = "publication" },
-    { name = "typeguard" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/54/c7/0d3091d2da6caf6019401ab88e6ea381a3e07f82aa6c07cd9ab8ec8ad23b/aws_cdk_lib-2.260.0.tar.gz", hash = "sha256:94412d6539b543e898aa3a408a39c4d68be06c992938f8191d12f6ab44e546df", size = 51055533, upload-time = "2026-06-16T23:37:20.352Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d4/62/41de6ea7bf3c10a18a3d70c42c0fe770c8e7c4b20cb9a7b4d95e295b50d6/aws_cdk_lib-2.263.0.tar.gz", hash = "sha256:fc87a36758c93c95845bb4889c21a899eb639b78e43d09d965d9d924233e60f6", size = 55074638, upload-time = "2026-07-31T16:47:16.594Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/97/5d/10e68f5d5201f2e079d2659357f8cc97b3f62dddd52ea07fbe7d138efbf9/aws_cdk_lib-2.260.0-py3-none-any.whl", hash = "sha256:41363a6fd72261ce64055b6c90538cf9b9ee2854faca7d2c56316656214f56ea", size = 51747762, upload-time = "2026-06-16T23:36:39.608Z" },
+    { url = "https://files.pythonhosted.org/packages/10/c3/e8d1cc686828e8213be2929db1d21b95beb50fcde36b6ecff309eae75916/aws_cdk_lib-2.263.0-py3-none-any.whl", hash = "sha256:a8d7928c7a01c25f6cb85c98e465df6ffd2b9e696bdb256257eeca2157c80609", size = 55742744, upload-time = "2026-07-31T16:46:31.48Z" },
 ]
 
 [[package]]
 name = "boto3"
-version = "1.43.39"
+version = "1.43.63"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "botocore" },
     { name = "jmespath" },
     { name = "s3transfer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/eb/35/d936d1f77098a84365ab57798cbf41cf935c07a6c397a4892dc95046a277/boto3-1.43.39.tar.gz", hash = "sha256:ca5701ddf1215ba25b9d973d18505bb4def3a75d3daa9b263c6d8c713b601cb3", size = 112679, upload-time = "2026-07-01T19:37:26.165Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4a/b7/3fdd53534170ef7d99d1707071e57ea0aeb0dec84ed0206d31e8c78f54d7/boto3-1.43.63.tar.gz", hash = "sha256:647c0f0b59710ce12a49323382bb5ece1b4e02199c736d19d555330dca7e947f", size = 112658, upload-time = "2026-08-03T19:55:05.178Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1b/b4/2a105025fa85e27022d55b0dae02b490c74acd20e904e81003d3b622fbbe/boto3-1.43.39-py3-none-any.whl", hash = "sha256:f4eef8bf98559342466a9a1a063b7efcf3e337e98a819479bc2f7a603b8b8ba7", size = 140030, upload-time = "2026-07-01T19:37:24.756Z" },
+    { url = "https://files.pythonhosted.org/packages/a6/57/a91420a14ef26fe52fc0706b5af21c00b2e4ff1c57b0c4272370c9b80399/boto3-1.43.63-py3-none-any.whl", hash = "sha256:859a8d1c50505a5cefb8629790dd34602ddb85bfd7ea5d34a362ab1793513636", size = 140024, upload-time = "2026-08-03T19:55:03.4Z" },
 ]
 
 [[package]]
@@ -283,9 +281,9 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aws-cdk-aws-lambda-python-alpha", specifier = "==2.260.0a0" },
-    { name = "aws-cdk-lib", specifier = "==2.260.0" },
-    { name = "boto3", specifier = "==1.43.39" },
+    { name = "aws-cdk-aws-lambda-python-alpha", specifier = "==2.263.0a0" },
+    { name = "aws-cdk-lib", specifier = "==2.263.0" },
+    { name = "boto3", specifier = "==1.43.63" },
     { name = "constructs", specifier = ">=10.6.0,<11.0.0" },
     { name = "email-validator", specifier = "==2.3.0" },
     { name = "pydantic", specifier = "==2.13.4" },
