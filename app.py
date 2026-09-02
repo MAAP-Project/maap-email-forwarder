@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 import json
+
 from aws_cdk import (
     App,
-    Stack,
-    aws_lambda as lambda_,
-    aws_s3 as s3,
-    aws_iam as iam,
-    aws_kms as kms,
-    aws_sns as sns,
-    aws_ses as ses,
-    aws_ses_actions as ses_actions,
-    custom_resources as cr,
     Duration,
     RemovalPolicy,
+    Stack,
+    aws_iam as iam,
+    aws_kms as kms,
+    aws_lambda as lambda_,
+    aws_s3 as s3,
+    aws_ses as ses,
+    aws_ses_actions as ses_actions,
+    aws_sns as sns,
+    custom_resources as cr,
 )
 from aws_cdk.aws_lambda_python_alpha import PythonFunction
 from constructs import Construct
+
 from infrastructure.config import CONFIG
 
 
@@ -57,7 +59,9 @@ class EmailForwarderStack(Stack):
                 conditions={
                     "StringEquals": {"AWS:SourceAccount": self.account},
                     "StringLike": {
-                        "AWS:SourceArn": f"arn:aws:ses:{self.region}:{self.account}:identity/{domain}"
+                        "AWS:SourceArn": (
+                            f"arn:aws:ses:{self.region}:{self.account}:identity/{domain}"
+                        ),
                     },
                 },
             )
@@ -122,14 +126,16 @@ class EmailForwarderStack(Stack):
             "DeliveryTopic", "Email Delivery Notifications"
         )
 
-        # SES domain identity — manages the verified domain and wires up notification topics.
+        # SES domain identity
+        # Manages the verified domain and wires up notification topics.
         ses_identity = ses.EmailIdentity(
             self,
             "SesIdentity",
             identity=ses.Identity.domain(domain),
         )
 
-        # Wire each SNS topic to the SES identity for bounce/complaint/delivery notifications.
+        # Wire each SNS topic to the SES identity for
+        # bounce/complaint/delivery notifications.
         for notification_type, topic, topic_policy in [
             ("Bounce", bounce_topic, bounce_topic_policy),
             ("Complaint", complaint_topic, complaint_topic_policy),
@@ -260,7 +266,7 @@ class EmailForwarderStack(Stack):
                 ),
             ],
             enabled=True,
-            scan_enabled=True
+            scan_enabled=True,
         )
 
 
